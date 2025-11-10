@@ -310,6 +310,128 @@ export const service = Effect.gen(function* () {
 			discordId,
 		});
 
+	const findChannelByInviteCode = (inviteCode: string) =>
+		watchQueryToLiveData(({ api }) => api.channels.findChannelByInviteCode, {
+			inviteCode,
+		});
+
+	const findAllThreadsByParentId = (parentId: string, limit?: number) =>
+		watchQueryToLiveData(({ api }) => api.channels.findAllThreadsByParentId, {
+			parentId,
+			limit,
+		});
+
+	const findAllChannelsByServerId = (serverId: Id<"servers">) =>
+		watchQueryToLiveData(({ api }) => api.channels.findAllChannelsByServerId, {
+			serverId,
+		});
+
+	const findManyChannelsById = (ids: string[], includeMessageCount?: boolean) =>
+		watchQueryToLiveData(({ api }) => api.channels.findManyChannelsById, {
+			ids,
+			includeMessageCount,
+		});
+
+	const findLatestThreads = (take: number) =>
+		watchQueryToLiveData(({ api }) => api.channels.findLatestThreads, {
+			take,
+		});
+
+	const findChannelsBeforeId = (
+		serverId: Id<"servers">,
+		id: string,
+		take?: number,
+	) =>
+		watchQueryToLiveData(({ api }) => api.channels.findChannelsBeforeId, {
+			serverId,
+			id,
+			take,
+		});
+
+	const createChannel = (data: {
+		channel: Channel;
+		settings?: ChannelSettings;
+	}) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.channels.createChannel, {
+					channel: data.channel,
+					settings: data.settings,
+				}),
+		);
+
+	const createManyChannels = (data: {
+		channels: Array<{ channel: Channel; settings?: ChannelSettings }>;
+	}) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.channels.createManyChannels, {
+					channels: data.channels,
+				}),
+		);
+
+	const updateChannel = (data: {
+		id: string;
+		channel: Channel;
+		settings?: ChannelSettings;
+	}) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.channels.updateChannel, {
+					id: data.id,
+					channel: data.channel,
+					settings: data.settings,
+				}),
+		);
+
+	const updateManyChannels = (channels: Channel[]) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.channels.updateManyChannels, {
+					channels,
+				}),
+		);
+
+	const deleteChannel = (id: string) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.channels.deleteChannel, {
+					id,
+				}),
+		);
+
+	const upsertManyChannels = (data: {
+		channels: Array<{
+			create: Channel;
+			update?: Channel;
+			settings?: ChannelSettings;
+		}>;
+	}) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.channels.upsertManyChannels, {
+					channels: data.channels,
+				}),
+		);
+
 	const upsertChannelWithSettings = (data: {
 		channel: Channel;
 		settings?: ChannelSettings;
@@ -344,6 +466,18 @@ export const service = Effect.gen(function* () {
 		},
 		channels: {
 			getChannelByDiscordId,
+			findChannelByInviteCode,
+			findAllThreadsByParentId,
+			findAllChannelsByServerId,
+			findManyChannelsById,
+			findLatestThreads,
+			findChannelsBeforeId,
+			createChannel,
+			createManyChannels,
+			updateChannel,
+			updateManyChannels,
+			deleteChannel,
+			upsertManyChannels,
 			upsertChannelWithSettings,
 		},
 	};

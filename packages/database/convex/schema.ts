@@ -68,6 +68,11 @@ export type ChannelSettings = Infer<typeof channelSettingsSchema>;
 export default defineSchema({
 	servers: defineTable(serverSchema),
 	serverPreferences: defineTable(serverPreferencesSchema),
-	channels: defineTable(channelSchema),
-	channelSettings: defineTable(channelSettingsSchema),
+	channels: defineTable(channelSchema)
+		.index("by_serverId", ["serverId"])
+		.index("by_parentId", ["parentId"])
+		.index("by_inviteCode", ["inviteCode"])
+		.index("by_type", ["type"]),
+	channelSettings: defineTable(channelSettingsSchema)
+		.index("by_channelId", ["channelId"]),
 });
