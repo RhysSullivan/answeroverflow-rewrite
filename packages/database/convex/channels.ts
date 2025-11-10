@@ -1,6 +1,12 @@
 import { type Infer, v } from "convex/values";
-import { api, internal } from "./_generated/api";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
+import {
+	internalMutation,
+	type MutationCtx,
+	mutation,
+	type QueryCtx,
+	query,
+} from "./_generated/server";
 import { channelSchema, channelSettingsSchema } from "./schema";
 
 type Channel = Infer<typeof channelSchema>;
@@ -16,11 +22,6 @@ const ChannelType = {
 	AnnouncementThread: 10,
 } as const;
 
-const CHANNELS_THAT_CAN_HAVE_AUTOTHREAD = new Set([
-	ChannelType.GuildAnnouncement,
-	ChannelType.GuildText,
-]);
-
 const DEFAULT_CHANNEL_SETTINGS: ChannelSettings = {
 	channelId: "",
 	indexingEnabled: false,
@@ -32,7 +33,7 @@ const DEFAULT_CHANNEL_SETTINGS: ChannelSettings = {
 
 // Helper function to get channel with settings
 async function getChannelWithSettings(
-	ctx: any,
+	ctx: QueryCtx | MutationCtx,
 	channelId: string,
 ): Promise<(Channel & { flags: ChannelSettings }) | null> {
 	const channel = await ctx.db
@@ -57,7 +58,7 @@ async function getChannelWithSettings(
 
 // Helper function to add settings to multiple channels
 async function addSettingsToChannels(
-	ctx: any,
+	ctx: QueryCtx | MutationCtx,
 	channels: Channel[],
 ): Promise<Array<Channel & { flags: ChannelSettings }>> {
 	if (channels.length === 0) return [];
