@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest";
-import { Effect, TestClock } from "effect";
+import { Effect } from "effect";
 import { api } from "../convex/_generated/api";
 import type { Server } from "../convex/schema";
 import { ConvexClientTest } from "./convex-client-test";
@@ -24,9 +24,6 @@ it.scoped("upserting server", () =>
 
     const created = yield* database.servers.getServerByDiscordId("123");
 
-    // Advance time to allow setTimeout callbacks to fire
-    yield* TestClock.adjust("10 millis");
-
     // Data should already be loaded due to defer mechanism
     expect(created?.data?.discordId).toBe("123");
   }).pipe(Effect.provide(DatabaseTestLayer))
@@ -46,9 +43,6 @@ it.scoped(
       const results = yield* Effect.all(
         Array.from({ length: 5 }, () => database.servers.getServerByDiscordId("123"))
       );
-
-      // Advance time to allow setTimeout callbacks to fire
-      yield* TestClock.adjust("10 millis");
 
       // Verify that only 1 query was made despite 5 calls to getServerByDiscordId
       const queryCallCount = convexClientTest.getQueryCallCount(
@@ -71,8 +65,6 @@ it.scoped(
         ...server,
         description: updatedDescription,
       });
-      yield* TestClock.adjust("10 millis");
-
       // Verify all instances updated together (they share the same watch)
       for (const result of results) {
         expect(result?.data?.description).toBe(updatedDescription);

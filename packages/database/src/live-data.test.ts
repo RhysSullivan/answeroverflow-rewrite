@@ -1,5 +1,5 @@
 import { expect, it } from "@effect/vitest";
-import { Effect, TestClock } from "effect";
+import { Effect } from "effect";
 import type { Server } from "../convex/schema";
 import { Database, DatabaseTestLayer } from "./database";
 
@@ -24,9 +24,6 @@ it.scoped("live data updates when server is modified", () =>
     // Get live data
     const liveData = yield* database.servers.getServerByDiscordId("123");
 
-    // Advance time to allow setTimeout callbacks to fire
-    yield* TestClock.adjust("10 millis");
-
     // Data should already be loaded due to defer mechanism
     expect(liveData?.data?.discordId).toBe("123");
     expect(liveData?.data?.description).toBe("Test Description");
@@ -37,9 +34,6 @@ it.scoped("live data updates when server is modified", () =>
       ...server,
       description: updatedDescription,
     });
-
-    // Advance time to allow setTimeout callbacks to fire
-    yield* TestClock.adjust("10 millis");
 
     // Verify live data has updated
     expect(liveData?.data?.description).toBe(updatedDescription);

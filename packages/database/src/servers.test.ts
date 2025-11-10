@@ -1,7 +1,7 @@
 // Tests for new server functions
 
 import { expect, it } from "@effect/vitest";
-import { Effect, Exit, TestClock } from "effect";
+import { Effect, Exit } from "effect";
 import type { Id } from "../convex/_generated/dataModel";
 import type { Channel, Server } from "../convex/schema";
 import { Database, DatabaseTestLayer } from "./database";
@@ -45,7 +45,6 @@ it.scoped("getServerById returns server by Convex ID", () =>
 
 		// Get server by Convex ID
 		const liveData = yield* database.servers.getServerById(serverId);
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?._id).toBe(serverId);
 		expect(liveData?.data?.discordId).toBe("123");
@@ -62,7 +61,6 @@ it.scoped("findServerByAlias returns server by vanity URL", () =>
 
 		// Find by alias
 		const liveData = yield* database.servers.findServerByAlias("test");
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.vanityUrl).toBe("test");
 		expect(liveData?.data?.discordId).toBe("123");
@@ -78,7 +76,6 @@ it.scoped("findServerByAliasOrId finds by vanity URL", () =>
 
 		// Find by alias
 		const liveData = yield* database.servers.findServerByAliasOrId("test");
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.vanityUrl).toBe("test");
 		expect(liveData?.data?.discordId).toBe("123");
@@ -94,7 +91,6 @@ it.scoped("findServerByAliasOrId finds by Discord ID", () =>
 
 		// Find by Discord ID
 		const liveData = yield* database.servers.findServerByAliasOrId("123");
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.discordId).toBe("123");
 	}).pipe(Effect.provide(DatabaseTestLayer)),
@@ -115,7 +111,6 @@ it.scoped("findServerByStripeCustomerId returns server", () =>
 		// Find by Stripe customer ID
 		const liveData =
 			yield* database.servers.findServerByStripeCustomerId("cus_test123");
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.stripeCustomerId).toBe("cus_test123");
 		expect(liveData?.data?.discordId).toBe("123");
@@ -137,7 +132,6 @@ it.scoped("findServerByStripeSubscriptionId returns server", () =>
 		// Find by Stripe subscription ID
 		const liveData =
 			yield* database.servers.findServerByStripeSubscriptionId("sub_test123");
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.stripeSubscriptionId).toBe("sub_test123");
 		expect(liveData?.data?.discordId).toBe("123");
@@ -155,7 +149,6 @@ it.scoped("findManyServersById returns multiple servers", () =>
 		// Get server IDs
 		const server1LiveData = yield* database.servers.getServerByDiscordId("123");
 		const server2LiveData = yield* database.servers.getServerByDiscordId("456");
-		yield* TestClock.adjust("10 millis");
 
 		const server1Id = server1LiveData?.data?._id;
 		const server2Id = server2LiveData?.data?._id;
@@ -169,7 +162,6 @@ it.scoped("findManyServersById returns multiple servers", () =>
 			server1Id,
 			server2Id,
 		]);
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.length).toBe(2);
 		expect(liveData?.data?.some((s) => s.discordId === "123")).toBe(true);
@@ -204,7 +196,6 @@ it.scoped("getBiggestServers returns servers ordered by member count", () =>
 
 		// Get biggest servers
 		const liveData = yield* database.servers.getBiggestServers(2);
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.length).toBe(2);
 		// Should be ordered by member count descending
@@ -228,7 +219,6 @@ it.scoped("createServer creates new server", () =>
 
 		// Verify it was created
 		const liveData = yield* database.servers.getServerByDiscordId("new123");
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.discordId).toBe("new123");
 		expect(liveData?.data?.name).toBe("New Server");
@@ -244,7 +234,6 @@ it.scoped("updateServer updates existing server", () =>
 
 		// Get server ID
 		const serverLiveData = yield* database.servers.getServerByDiscordId("123");
-		yield* TestClock.adjust("10 millis");
 		const serverId = serverLiveData?.data?._id;
 
 		if (!serverId) {
@@ -261,7 +250,6 @@ it.scoped("updateServer updates existing server", () =>
 
 		// Verify update
 		const updatedLiveData = yield* database.servers.getServerByDiscordId("123");
-		yield* TestClock.adjust("10 millis");
 
 		expect(updatedLiveData?.data?.name).toBe("Updated Server Name");
 		expect(updatedLiveData?.data?.description).toBe("Updated Description");
@@ -282,7 +270,6 @@ it.scoped(
 			// Get server ID
 			const serverLiveData =
 				yield* database.servers.getServerByDiscordId("123");
-			yield* TestClock.adjust("10 millis");
 			const serverId = serverLiveData?.data?._id;
 
 			if (!serverId) {
@@ -292,7 +279,6 @@ it.scoped(
 			// Get server with channels (should be empty initially)
 			const liveData =
 				yield* database.servers.findServerByIdWithChannels(serverId);
-			yield* TestClock.adjust("10 millis");
 
 			expect(liveData?.data?.channels).toBeDefined();
 			expect(liveData?.data?.channels?.length).toBe(0);
@@ -305,7 +291,6 @@ it.scoped(
 				type: 0, // GuildText
 			};
 			yield* database.channels.upsertChannelWithSettings({ channel });
-			yield* TestClock.adjust("10 millis");
 
 			// Should now have one channel
 			expect(liveData?.data?.channels?.length).toBe(1);
@@ -321,7 +306,6 @@ it.scoped(
 			yield* database.channels.upsertChannelWithSettings({
 				channel: forumChannel,
 			});
-			yield* TestClock.adjust("10 millis");
 
 			// Should have two channels, forum first (sorted)
 			expect(liveData?.data?.channels?.length).toBe(2);
@@ -342,8 +326,6 @@ it.scoped("multiple queries update correctly when server data changes", () =>
 		const byAlias = yield* database.servers.findServerByAlias("test");
 		const allServers = yield* database.servers.publicGetAllServers();
 
-		yield* TestClock.adjust("10 millis");
-
 		// All should have initial data
 		expect(byDiscordId?.data?.name).toBe("Test Server");
 		expect(byAlias?.data?.name).toBe("Test Server");
@@ -351,7 +333,6 @@ it.scoped("multiple queries update correctly when server data changes", () =>
 
 		// Update server via updateServer
 		const serverLiveData = yield* database.servers.getServerByDiscordId("123");
-		yield* TestClock.adjust("10 millis");
 		const serverId = serverLiveData?.data?._id;
 
 		if (!serverId) {
@@ -364,7 +345,6 @@ it.scoped("multiple queries update correctly when server data changes", () =>
 			vanityUrl: "updated-alias",
 		};
 		yield* database.servers.updateServer(serverId, updatedServer);
-		yield* TestClock.adjust("10 millis");
 
 		// All queries should reflect the update
 		expect(byDiscordId?.data?.name).toBe("Updated Name");
@@ -374,7 +354,6 @@ it.scoped("multiple queries update correctly when server data changes", () =>
 		// New alias should work
 		const newByAlias =
 			yield* database.servers.findServerByAlias("updated-alias");
-		yield* TestClock.adjust("10 millis");
 		expect(newByAlias?.data?.name).toBe("Updated Name");
 	}).pipe(Effect.provide(DatabaseTestLayer)),
 );
@@ -400,7 +379,6 @@ it.scoped("getBiggestServers updates when member counts change", () =>
 
 		// Get biggest servers
 		const liveData = yield* database.servers.getBiggestServers(2);
-		yield* TestClock.adjust("10 millis");
 
 		// Should be ordered: B (200), A (100)
 		expect(liveData?.data?.length).toBe(2);
@@ -410,7 +388,6 @@ it.scoped("getBiggestServers updates when member counts change", () =>
 		// Update serverA to have more members
 		const serverALiveData =
 			yield* database.servers.getServerByDiscordId("serverA");
-		yield* TestClock.adjust("10 millis");
 		const serverAId = serverALiveData?.data?._id;
 
 		if (!serverAId) {
@@ -422,7 +399,6 @@ it.scoped("getBiggestServers updates when member counts change", () =>
 			approximateMemberCount: 300,
 		};
 		yield* database.servers.updateServer(serverAId, updatedServerA);
-		yield* TestClock.adjust("10 millis");
 
 		// Order should change: A (300), B (200)
 		expect(liveData?.data?.[0]?.discordId).toBe("serverA");
@@ -451,7 +427,6 @@ it.scoped("findManyServersById handles partial updates correctly", () =>
 		const s1Live = yield* database.servers.getServerByDiscordId("s1");
 		const s2Live = yield* database.servers.getServerByDiscordId("s2");
 		const s3Live = yield* database.servers.getServerByDiscordId("s3");
-		yield* TestClock.adjust("10 millis");
 
 		const s1Id = s1Live?.data?._id;
 		const s2Id = s2Live?.data?._id;
@@ -467,7 +442,6 @@ it.scoped("findManyServersById handles partial updates correctly", () =>
 			s2Id,
 			s3Id,
 		]);
-		yield* TestClock.adjust("10 millis");
 
 		expect(liveData?.data?.length).toBe(3);
 
@@ -477,7 +451,6 @@ it.scoped("findManyServersById handles partial updates correctly", () =>
 			name: "Updated Server 1",
 		};
 		yield* database.servers.updateServer(s1Id, updatedS1);
-		yield* TestClock.adjust("10 millis");
 
 		// LiveData should reflect the update
 		const updatedServer = liveData?.data?.find((s) => s._id === s1Id);

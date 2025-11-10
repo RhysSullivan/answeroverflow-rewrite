@@ -1,7 +1,7 @@
 import { expect, it } from "@effect/vitest";
 import type { Message, TextChannel } from "discord.js";
 import { ChannelType, MessageType } from "discord.js";
-import { Effect, TestClock } from "effect";
+import { Effect } from "effect";
 import { describe } from "vitest";
 import { handleAutoThread } from "../handlers/auto-thread";
 
@@ -51,7 +51,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadCreated).toBe(true);
 		}),
@@ -74,7 +73,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadCreated).toBe(false);
 		}),
@@ -91,7 +89,6 @@ describe("handleAutoThread", () => {
 			});
 
 			yield* handleAutoThread(null, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadCreated).toBe(false);
 		}),
@@ -117,7 +114,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadCreated).toBe(false);
 		}),
@@ -145,7 +141,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadCreated).toBe(false);
 		}),
@@ -171,7 +166,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadCreated).toBe(false);
 		}),
@@ -195,7 +189,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadName).toBe("TestUser - This is a test message");
 		}),
@@ -220,7 +213,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadName.length).toBe(50); // 47 + "..."
 			expect(threadName.endsWith("...")).toBe(true);
@@ -253,7 +245,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadName).toBe("TestUser - test-file.png");
 		}),
@@ -277,7 +268,6 @@ describe("handleAutoThread", () => {
 			};
 
 			yield* handleAutoThread(channelSettings, mockMessage);
-			yield* TestClock.adjust("10 millis");
 
 			expect(threadName).toBe("TestUser - bold italic code");
 		}),
