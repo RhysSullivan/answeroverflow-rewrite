@@ -1,5 +1,6 @@
 import { Database, DatabaseLayer } from "@packages/database/database";
 import { Effect, Layer } from "effect";
+import { handleAutoThread } from "./src/handlers/auto-thread";
 import { DiscordClient } from "./src/discord-client";
 import { DiscordClientRealLayer } from "./src/discord-client-real";
 
@@ -47,10 +48,30 @@ const program = Effect.gen(function* () {
 
 	// Subscribe to messageCreate event
 	yield* discord.on("messageCreate", (message) =>
-		Effect.sync(() => {
+		Effect.gen(function* () {
+			// Handle ping command
 			if (message.content === "!ping") {
 				console.log("Received ping command!");
 			}
+
+			// Handle auto thread
+			const channelLiveData = yield* database.channels.getChannelByDiscordId(
+				message.channel.id,
+			);
+
+			// Wait a bit for LiveData to potentially load
+			yield* Effect.sleep("10 millis");
+
+			const channelSettings = channelLiveData?.data ?? null;
+
+			// Run auto thread handler (errors are handled internally)
+			yield* handleAutoThread(channelSettings, message).pipe(
+				Effect.catchAll((error) =>
+					Effect.sync(() => {
+						console.error("Error in auto thread handler:", error);
+					}),
+				),
+			);
 		}),
 	);
 

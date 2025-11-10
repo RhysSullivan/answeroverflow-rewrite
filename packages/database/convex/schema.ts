@@ -40,9 +40,34 @@ export const userServerSettings = v.object({
 	messageIndexingDisabled: v.boolean(),
 });
 
+export const channelSchema = v.object({
+	id: v.string(),
+	serverId: v.id("servers"),
+	name: v.string(),
+	type: v.number(),
+	parentId: v.optional(v.string()),
+	inviteCode: v.optional(v.string()),
+	archivedTimestamp: v.optional(v.number()),
+	solutionTagId: v.optional(v.string()),
+	lastIndexedSnowflake: v.optional(v.string()),
+});
+
+export const channelSettingsSchema = v.object({
+	channelId: v.string(),
+	indexingEnabled: v.boolean(),
+	markSolutionEnabled: v.boolean(),
+	sendMarkSolutionInstructionsInNewThreads: v.boolean(),
+	autoThreadEnabled: v.boolean(),
+	forumGuidelinesConsentEnabled: v.boolean(),
+});
+
 export type Server = Infer<typeof serverSchema>;
+export type Channel = Infer<typeof channelSchema>;
+export type ChannelSettings = Infer<typeof channelSettingsSchema>;
 
 export default defineSchema({
 	servers: defineTable(serverSchema),
 	serverPreferences: defineTable(serverPreferencesSchema),
+	channels: defineTable(channelSchema),
+	channelSettings: defineTable(channelSettingsSchema),
 });

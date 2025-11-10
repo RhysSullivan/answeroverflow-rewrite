@@ -8,13 +8,15 @@
  * @module
  */
 
+import type * as channels from "../channels.js";
+import type * as dashboard from "../dashboard.js";
+import type * as servers from "../servers.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
-import type * as dashboard from "../dashboard.js";
-import type * as servers from "../servers.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -25,14 +27,19 @@ import type * as servers from "../servers.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  channels: typeof channels;
   dashboard: typeof dashboard;
   servers: typeof servers;
 }>;
+declare const fullApiWithMounts: typeof fullApi;
+
 export declare const api: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "public">
 >;
 export declare const internal: FilterApi<
-  typeof fullApi,
+  typeof fullApiWithMounts,
   FunctionReference<any, "internal">
 >;
+
+export declare const components: {};

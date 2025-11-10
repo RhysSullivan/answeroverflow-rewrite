@@ -7,7 +7,7 @@ import type {
 import { getFunctionName } from "convex/server";
 import { Context, Effect, Exit, Layer, Request, RequestResolver } from "effect";
 import { api, internal } from "../convex/_generated/api";
-import type { Server } from "../convex/schema";
+import type { Server, Channel, ChannelSettings } from "../convex/schema";
 import { ConvexClientHttpUnifiedLayer } from "./convex-client-http";
 import {
 	ConvexClientTestLayer,
@@ -222,11 +222,35 @@ export const service = Effect.gen(function* () {
 	const publicGetAllServers = () =>
 		watchQueryToLiveData(({ api }) => api.servers.publicGetAllServers, {});
 
+	const getChannelByDiscordId = (discordId: string) =>
+		watchQueryToLiveData(({ api }) => api.channels.getChannelByDiscordId, {
+			discordId,
+		});
+
+	const upsertChannelWithSettings = (data: {
+		channel: Channel;
+		settings?: ChannelSettings;
+	}) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.channels.upsertChannelWithSettings, {
+					channel: data.channel,
+					settings: data.settings,
+				}),
+		);
+
 	return {
 		servers: {
 			upsertServer,
 			getServerById,
 			publicGetAllServers,
+		},
+		channels: {
+			getChannelByDiscordId,
+			upsertChannelWithSettings,
 		},
 	};
 });
