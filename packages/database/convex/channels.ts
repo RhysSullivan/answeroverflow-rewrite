@@ -540,6 +540,8 @@ export const upsertManyChannels = mutation({
 
 		for (let i = 0; i < args.channels.length; i++) {
 			const item = args.channels[i];
+			if (!item) continue;
+
 			const existing = existingChannels[i];
 
 			if (existing) {
