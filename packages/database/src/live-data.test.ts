@@ -22,7 +22,7 @@ it.scoped("live data updates when server is modified", () =>
     yield* database.servers.upsertServer(server);
 
     // Get live data
-    const liveData = yield* database.servers.getServerById("123");
+    const liveData = yield* database.servers.getServerByDiscordId("123");
 
     // Advance time to allow setTimeout callbacks to fire
     yield* TestClock.adjust("10 millis");

@@ -22,7 +22,8 @@ it.scoped("getChannelByDiscordId returns channel with flags decoded", () =>
 		yield* database.servers.upsertServer(testServer);
 
 		// Get the server LiveData to find its ID
-		const serverLiveData = yield* database.servers.getServerById("server123");
+		const serverLiveData =
+			yield* database.servers.getServerByDiscordId("server123");
 		const serverId = serverLiveData?.data?._id;
 
 		if (!serverId) {
@@ -87,7 +88,8 @@ it.scoped(
 			yield* database.servers.upsertServer(testServer);
 
 			// Get the server LiveData to find its ID
-			const serverLiveData = yield* database.servers.getServerById("server123");
+			const serverLiveData =
+				yield* database.servers.getServerByDiscordId("server123");
 			const serverId = serverLiveData?.data?._id;
 
 			if (!serverId) {
@@ -158,7 +160,8 @@ it.scoped("getChannelByDiscordId decodes all flags correctly", () =>
 		yield* database.servers.upsertServer(testServer);
 
 		// Get the server LiveData to find its ID
-		const serverLiveData = yield* database.servers.getServerById("server123");
+		const serverLiveData =
+			yield* database.servers.getServerByDiscordId("server123");
 		const serverId = serverLiveData?.data?._id;
 
 		if (!serverId) {

@@ -22,7 +22,7 @@ it.scoped("upserting server", () =>
 
     yield* database.servers.upsertServer(server);
 
-    const created = yield* database.servers.getServerById("123");
+    const created = yield* database.servers.getServerByDiscordId("123");
 
     // Advance time to allow setTimeout callbacks to fire
     yield* TestClock.adjust("10 millis");
@@ -33,7 +33,7 @@ it.scoped("upserting server", () =>
 );
 
 it.scoped(
-  "getServerById uses watch cache - only makes 1 query for 5 calls",
+  "getServerByDiscordId uses watch cache - only makes 1 query for 5 calls",
   () =>
     Effect.gen(function* () {
       const database = yield* Database;
@@ -42,15 +42,15 @@ it.scoped(
       // Set up server data
       yield* database.servers.upsertServer(server);
 
-      // Call getServerById 5 times - should reuse the same watch from cache
+      // Call getServerByDiscordId 5 times - should reuse the same watch from cache
       const results = yield* Effect.all(
-        Array.from({ length: 5 }, () => database.servers.getServerById("123"))
+        Array.from({ length: 5 }, () => database.servers.getServerByDiscordId("123"))
       );
 
       // Advance time to allow setTimeout callbacks to fire
       yield* TestClock.adjust("10 millis");
 
-      // Verify that only 1 query was made despite 5 calls to getServerById
+      // Verify that only 1 query was made despite 5 calls to getServerByDiscordId
       const queryCallCount = convexClientTest.getQueryCallCount(
         api.servers.publicGetServerByDiscordId,
         { discordId: "123" }
