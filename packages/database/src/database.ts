@@ -7,6 +7,7 @@ import type {
 import { getFunctionName } from "convex/server";
 import { Context, Effect, Exit, Layer, Request, RequestResolver } from "effect";
 import { api, internal } from "../convex/_generated/api";
+import type { Id } from "../convex/_generated/dataModel";
 import type { Channel, ChannelSettings, Server } from "../convex/schema";
 import { ConvexClientHttpUnifiedLayer } from "./convex-client-http";
 import {
@@ -214,10 +215,92 @@ export const service = Effect.gen(function* () {
 				}),
 		);
 
+	const createServer = (data: Server) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.servers.createServerExternal, {
+					data,
+					apiKey: externalSecret,
+				}),
+		);
+
+	const updateServer = (id: Id<"servers">, data: Server) =>
+		convexClient.use(
+			(
+				client: ConvexClientShared,
+				convexApi: { api: typeof api; internal: typeof internal },
+			) =>
+				client.mutation(convexApi.api.servers.updateServerExternal, {
+					id,
+					data,
+					apiKey: externalSecret,
+				}),
+		);
+
+	const getServerById = (id: Id<"servers">) =>
+		watchQueryToLiveData(({ api }) => api.servers.publicGetServerById, {
+			id,
+		});
+
 	const getServerByDiscordId = (discordId: string) =>
 		watchQueryToLiveData(({ api }) => api.servers.publicGetServerByDiscordId, {
 			discordId,
 		});
+
+	const findServerByAlias = (alias: string) =>
+		watchQueryToLiveData(({ api }) => api.servers.publicFindServerByAlias, {
+			alias,
+		});
+
+	const findServerByAliasOrId = (aliasOrId: string) =>
+		watchQueryToLiveData(({ api }) => api.servers.publicFindServerByAliasOrId, {
+			aliasOrId,
+		});
+
+	const findServerByCustomDomain = (domain: string) =>
+		watchQueryToLiveData(
+			({ api }) => api.servers.publicFindServerByCustomDomain,
+			{
+				domain,
+			},
+		);
+
+	const findServerByStripeCustomerId = (stripeCustomerId: string) =>
+		watchQueryToLiveData(
+			({ api }) => api.servers.publicFindServerByStripeCustomerId,
+			{
+				stripeCustomerId,
+			},
+		);
+
+	const findServerByStripeSubscriptionId = (stripeSubscriptionId: string) =>
+		watchQueryToLiveData(
+			({ api }) => api.servers.publicFindServerByStripeSubscriptionId,
+			{
+				stripeSubscriptionId,
+			},
+		);
+
+	const findManyServersById = (ids: Id<"servers">[]) =>
+		watchQueryToLiveData(({ api }) => api.servers.publicFindManyServersById, {
+			ids,
+		});
+
+	const getBiggestServers = (take: number) =>
+		watchQueryToLiveData(({ api }) => api.servers.publicGetBiggestServers, {
+			take,
+		});
+
+	const findServerByIdWithChannels = (id: Id<"servers">) =>
+		watchQueryToLiveData(
+			({ api }) => api.servers.publicFindServerByIdWithChannels,
+			{
+				id,
+			},
+		);
 
 	const publicGetAllServers = () =>
 		watchQueryToLiveData(({ api }) => api.servers.publicGetAllServers, {});
@@ -245,7 +328,18 @@ export const service = Effect.gen(function* () {
 	return {
 		servers: {
 			upsertServer,
+			createServer,
+			updateServer,
+			getServerById,
 			getServerByDiscordId,
+			findServerByAlias,
+			findServerByAliasOrId,
+			findServerByCustomDomain,
+			findServerByStripeCustomerId,
+			findServerByStripeSubscriptionId,
+			findManyServersById,
+			getBiggestServers,
+			findServerByIdWithChannels,
 			publicGetAllServers,
 		},
 		channels: {
