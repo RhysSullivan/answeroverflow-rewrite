@@ -293,7 +293,7 @@ describe("handleAutoThread", () => {
 				},
 			});
 			yield* handleAutoThread(channelSettings, message);
-			expect(threadName.length).toBe(50); // "TestUser - " (11) + 36 chars + "..." (3) = 50
+			expect(threadName.length).toBe(50); // First 47 chars + "..." (3) = 50
 			expect(threadName).toMatch(/^TestUser - .{36}\.\.\.$/);
 		}));
 
