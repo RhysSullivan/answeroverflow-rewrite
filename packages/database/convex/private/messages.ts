@@ -27,11 +27,7 @@ import {
 	getMessageById as getMessageByIdShared,
 	upsertMessageInternalLogic,
 } from "../shared/shared";
-import {
-	applyVisibilityToMessages,
-	getAuthorVisibilityContexts,
-	getServerVisibilityContext,
-} from "../shared/visibility";
+import { getSanitizedMessagesForServer } from "../shared/visibility";
 
 type Message = Infer<typeof messageSchema>;
 
@@ -784,17 +780,11 @@ export const getMessagePageData = privateQuery({
 
 		const authorMap = await buildAuthorMap(ctx, messagesToShow);
 
-		const authorIds = Array.from(authorMap.keys());
-		const [serverVisibility, authorVisibilityMap] = await Promise.all([
-			getServerVisibilityContext(ctx, targetMessage.serverId),
-			getAuthorVisibilityContexts(ctx, targetMessage.serverId, authorIds),
-		]);
-
-		const sanitizedMessages = applyVisibilityToMessages(
+		const sanitizedMessages = await getSanitizedMessagesForServer(
+			ctx,
 			messagesToShow,
-			serverVisibility,
+			targetMessage.serverId,
 			authorMap,
-			authorVisibilityMap,
 		);
 
 		const referenceTargets = collectMessageReferenceTargets(messagesToShow);

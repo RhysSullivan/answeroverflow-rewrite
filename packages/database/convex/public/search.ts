@@ -13,14 +13,7 @@ import {
 	getInternalLinksMetadata,
 	getMentionMetadata,
 } from "../shared/shared";
-import {
-	applyVisibilityToAuthor,
-	applyVisibilityToMessages,
-	getAuthorVisibilityContexts,
-	getServerVisibilityContext,
-	isMessagePublic,
-	type VisibilityContext,
-} from "../shared/visibility";
+import { getSanitizedMessages } from "../shared/visibility";
 import { publicQuery } from "./custom_functions";
 
 export const publicSearch = publicQuery({
@@ -63,52 +56,7 @@ export const publicSearch = publicQuery({
 				.map((s) => [s._id, s.discordId]),
 		);
 
-		const messagesByServer = new Map<string, typeof messages>();
-		for (const message of messages) {
-			const serverIdStr = message.serverId;
-			if (!messagesByServer.has(serverIdStr)) {
-				messagesByServer.set(serverIdStr, []);
-			}
-			messagesByServer.get(serverIdStr)!.push(message);
-		}
-
-		const sanitizedMessagesByServer = await Promise.all(
-			Array.from(messagesByServer.entries()).map(
-				async ([serverIdStr, serverMessages]) => {
-					const serverId = serverIdStr as typeof messages[0]["serverId"];
-					const serverAuthorIds = Array.from(
-						new Set(serverMessages.map((m) => m.authorId)),
-					);
-					const [serverVisibility, authorVisibilityMap] = await Promise.all([
-						getServerVisibilityContext(ctx, serverId),
-						getAuthorVisibilityContexts(ctx, serverId, serverAuthorIds),
-					]);
-
-					const serverAuthorMap = new Map(
-						serverAuthorIds
-							.map((id) => {
-								const author = authorMap.get(id);
-								return author ? [id, author] : null;
-							})
-							.filter(
-								(
-									entry,
-								): entry is [string, NonNullable<(typeof authors)[0]>] =>
-									entry !== null,
-							),
-					);
-
-					return applyVisibilityToMessages(
-						serverMessages,
-						serverVisibility,
-						serverAuthorMap,
-						authorVisibilityMap,
-					);
-				},
-			),
-		);
-
-		const sanitizedMessages = sanitizedMessagesByServer.flat();
+		const sanitizedMessages = await getSanitizedMessages(ctx, messages, authorMap);
 
 		const allUserIds = new Set<string>();
 		const allChannelIds = new Set<string>();
@@ -308,75 +256,20 @@ export const getRecentThreads = publicQuery({
 				.map((a) => [a.id, a]),
 		);
 
-		const messagesByServer = new Map<string, typeof threadsWithMessages>();
-		for (const tm of threadsWithMessages) {
-			const serverIdStr = tm.message.serverId;
-			if (!messagesByServer.has(serverIdStr)) {
-				messagesByServer.set(serverIdStr, []);
-			}
-			messagesByServer.get(serverIdStr)!.push(tm);
-		}
-
-		const sanitizedThreadsByServer = await Promise.all(
-			Array.from(messagesByServer.entries()).map(
-				async ([serverIdStr, serverThreads]) => {
-					const serverId = serverIdStr as typeof threadsWithMessages[0]["message"]["serverId"];
-					const serverAuthorIds = Array.from(
-						new Set(serverThreads.map((tm) => tm.message.authorId)),
-					);
-					const [serverVisibility, authorVisibilityMap] = await Promise.all([
-						getServerVisibilityContext(ctx, serverId),
-						getAuthorVisibilityContexts(ctx, serverId, serverAuthorIds),
-					]);
-
-					const serverAuthorMap = new Map(
-						serverAuthorIds
-							.map((id) => {
-								const author = authorMap.get(id);
-								return author ? [id, author] : null;
-							})
-							.filter(
-								(
-									entry,
-								): entry is [string, NonNullable<(typeof authors)[0]>] =>
-									entry !== null,
-							),
-					);
-
-					return serverThreads.map(({ thread, message }) => {
-						const author = serverAuthorMap.get(message.authorId) ?? null;
-						const authorVisibility =
-							authorVisibilityMap.get(message.authorId) ?? null;
-						const isPublic = isMessagePublic(
-							serverVisibility,
-							authorVisibility,
-						);
-
-						const visibility: VisibilityContext = {
-							server: serverVisibility,
-							user: authorVisibility,
-						};
-
-						const sanitizedAuthor = applyVisibilityToAuthor(
-							author,
-							visibility,
-							isPublic,
-						);
-
-						return {
-							thread,
-							message: {
-								...message,
-								public: isPublic,
-							},
-							author: sanitizedAuthor,
-						};
-					});
-				},
-			),
+		const messages = threadsWithMessages.map((tm) => tm.message);
+		const sanitizedMessages = await getSanitizedMessages(ctx, messages, authorMap);
+		const sanitizedMessagesMap = new Map(
+			sanitizedMessages.map((sm) => [sm.message.id, sm]),
 		);
 
-		const sanitizedThreads = sanitizedThreadsByServer.flat();
+		const sanitizedThreads = threadsWithMessages.map(({ thread, message }) => {
+			const sanitized = sanitizedMessagesMap.get(message.id);
+			return {
+				thread,
+				message: sanitized?.message ?? message,
+				author: sanitized?.author ?? null,
+			};
+		});
 
 		const parentChannelIds = new Set(
 			threadsWithMessages

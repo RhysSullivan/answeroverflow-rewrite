@@ -237,3 +237,83 @@ export function applyVisibilityToMessages(
 		};
 	});
 }
+
+export async function getSanitizedMessages(
+	ctx: QueryCtx | MutationCtx,
+	messages: Message[],
+	authorMap: Map<string, DiscordAccount>,
+): Promise<Array<{ message: SanitizedMessage; author: SanitizedAuthor | null }>> {
+	if (messages.length === 0) {
+		return [];
+	}
+
+	const messagesByServer = new Map<Id<"servers">, Message[]>();
+	for (const message of messages) {
+		const serverId = message.serverId;
+		if (!messagesByServer.has(serverId)) {
+			messagesByServer.set(serverId, []);
+		}
+		messagesByServer.get(serverId)!.push(message);
+	}
+
+	const sanitizedMessagesByServer = await Promise.all(
+		Array.from(messagesByServer.entries()).map(
+			async ([serverId, serverMessages]) => {
+				const serverAuthorIds = Array.from(
+					new Set(serverMessages.map((m) => m.authorId)),
+				);
+				const [serverVisibility, authorVisibilityMap] = await Promise.all([
+					getServerVisibilityContext(ctx, serverId),
+					getAuthorVisibilityContexts(ctx, serverId, serverAuthorIds),
+				]);
+
+				const serverAuthorMap = new Map(
+					serverAuthorIds
+						.map((id) => {
+							const author = authorMap.get(id);
+							return author ? [id, author] : null;
+						})
+						.filter(
+							(
+								entry,
+							): entry is [string, DiscordAccount] =>
+								entry !== null,
+						),
+				);
+
+				return applyVisibilityToMessages(
+					serverMessages,
+					serverVisibility,
+					serverAuthorMap,
+					authorVisibilityMap,
+				);
+			},
+		),
+	);
+
+	return sanitizedMessagesByServer.flat();
+}
+
+export async function getSanitizedMessagesForServer(
+	ctx: QueryCtx | MutationCtx,
+	messages: Message[],
+	serverId: Id<"servers">,
+	authorMap: Map<string, DiscordAccount>,
+): Promise<Array<{ message: SanitizedMessage; author: SanitizedAuthor | null }>> {
+	if (messages.length === 0) {
+		return [];
+	}
+
+	const authorIds = Array.from(new Set(messages.map((m) => m.authorId)));
+	const [serverVisibility, authorVisibilityMap] = await Promise.all([
+		getServerVisibilityContext(ctx, serverId),
+		getAuthorVisibilityContexts(ctx, serverId, authorIds),
+	]);
+
+	return applyVisibilityToMessages(
+		messages,
+		serverVisibility,
+		authorMap,
+		authorVisibilityMap,
+	);
+}

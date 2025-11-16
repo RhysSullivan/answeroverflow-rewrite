@@ -55,7 +55,39 @@ When anonymized:
 
 ## Usage in Convex Functions
 
-### Example: Applying Visibility to Messages
+### High-Level API (Recommended)
+
+The visibility system provides high-level functions that handle all the complexity internally:
+
+#### For Messages from a Single Server
+
+```typescript
+import { getSanitizedMessagesForServer } from "../shared/visibility";
+
+const authorMap = await buildAuthorMap(ctx, messages);
+const sanitizedMessages = await getSanitizedMessagesForServer(
+  ctx,
+  messages,
+  serverId,
+  authorMap,
+);
+// Returns: Array<{ message: SanitizedMessage; author: SanitizedAuthor | null }>
+```
+
+#### For Messages from Multiple Servers
+
+```typescript
+import { getSanitizedMessages } from "../shared/visibility";
+
+const authorMap = await buildAuthorMap(ctx, messages);
+const sanitizedMessages = await getSanitizedMessages(ctx, messages, authorMap);
+// Automatically groups by server and applies visibility per server
+// Returns: Array<{ message: SanitizedMessage; author: SanitizedAuthor | null }>
+```
+
+### Low-Level API (Advanced Use Cases)
+
+For advanced use cases where you need fine-grained control:
 
 ```typescript
 import {
@@ -64,34 +96,18 @@ import {
   getServerVisibilityContext,
 } from "../shared/visibility";
 
-// Get visibility contexts
 const authorIds = Array.from(authorMap.keys());
 const [serverVisibility, authorVisibilityMap] = await Promise.all([
   getServerVisibilityContext(ctx, serverId),
   getAuthorVisibilityContexts(ctx, serverId, authorIds),
 ]);
 
-// Apply visibility
 const sanitizedMessages = applyVisibilityToMessages(
   messages,
   serverVisibility,
   authorMap,
   authorVisibilityMap,
 );
-```
-
-### Example: Single Author
-
-```typescript
-import {
-  applyVisibilityToAuthor,
-  getVisibilityContext,
-  isMessagePublic,
-} from "../shared/visibility";
-
-const visibility = await getVisibilityContext(ctx, serverId, userId);
-const isPublic = isMessagePublic(visibility.server, visibility.user);
-const sanitizedAuthor = applyVisibilityToAuthor(author, visibility, isPublic);
 ```
 
 ## Sanitized Types
