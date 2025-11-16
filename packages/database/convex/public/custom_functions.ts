@@ -6,28 +6,27 @@ import {
 	customQuery,
 } from "convex-helpers/server/customFunctions";
 import { action, mutation, query } from "../_generated/server";
-import { getDiscordAccountIdFromAuth } from "../shared/auth";
+import {
+	getDiscordAccountIdFromAuth,
+	getDiscordAccountWithToken,
+} from "../shared/auth";
 import { getAuthIdentity } from "../shared/authIdentity";
-
-const ANONYMOUS_AUTH_APPLICATION_ID = "anonymous";
 
 export const publicQuery = customQuery(query, {
 	args: {
 		discordAccountId: v.optional(v.string()),
 		anonymousSessionId: v.optional(v.string()),
+		type: v.optional(v.union(v.literal("signed-in"), v.literal("anonymous"))),
+		rateLimitKey: v.optional(v.string()),
 	},
-	// @ts-expect-error
 	input: async (ctx, args) => {
 		const identity = await getAuthIdentity(ctx);
-
-		console.log("identity", identity);
+		let anonymousSessionId: string | undefined;
 		if (!identity) {
 			throw new Error("Not authenticated");
 		}
-
 		const identityType = identity.type;
 		const subject = identity.subject;
-
 		if (identityType === "anonymous" && subject) {
 			const anonymousSession = await ctx.db
 				.query("anonymousSessions")
@@ -37,32 +36,28 @@ export const publicQuery = customQuery(query, {
 			if (!anonymousSession) {
 				throw new Error("Not authenticated");
 			}
-
-			return {
-				ctx,
-				args: {
-					...args,
-					anonymousSessionId: anonymousSession._id,
-					discordAccountId: undefined,
-				},
-			};
+			anonymousSessionId = anonymousSession._id;
 		}
 
+		let discordAccountId: string | undefined;
 		if (identityType !== "anonymous") {
-			const discordAccountId = await getDiscordAccountIdFromAuth(ctx);
-			if (discordAccountId) {
-				return {
-					ctx,
-					args: {
-						...args,
-						discordAccountId,
-						anonymousSessionId: undefined,
-					},
-				};
-			}
+			const account = await getDiscordAccountWithToken(ctx);
+			discordAccountId = account?.accountId;
 		}
-
-		throw new Error("Not authenticated");
+		const rateLimitKey = discordAccountId ?? anonymousSessionId;
+		if (!rateLimitKey) {
+			throw new Error("Not authenticated");
+		}
+		return {
+			ctx,
+			args: {
+				...args,
+				rateLimitKey: "testing",
+				discordAccountId,
+				anonymousSessionId,
+				type: identityType,
+			},
+		};
 	},
 });
 
