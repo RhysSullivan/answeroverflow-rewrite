@@ -11,22 +11,16 @@ import {
 import { attachmentSchema, emojiSchema, messageSchema } from "../schema";
 import {
 	deleteMessageInternalLogic,
-	extractDiscordLinks,
-	extractMentionIds,
-	findAttachmentsByMessageId as findAttachmentsByMessageIdShared,
 	findIgnoredDiscordAccountById,
 	findMessagesByAuthorId as findMessagesByAuthorIdShared,
 	findMessagesByChannelId as findMessagesByChannelIdShared,
-	findReactionsByMessageId as findReactionsByMessageIdShared,
-	findSolutionsByQuestionId as findSolutionsByQuestionIdShared,
 	findUserServerSettingsById,
 	getChannelWithSettings,
 	getDiscordAccountById,
-	getInternalLinksMetadata,
-	getMentionMetadata,
 	getMessageById as getMessageByIdShared,
 	upsertMessageInternalLogic,
 } from "../shared/shared";
+import { buildMessagesWithFullData } from "../shared/message-builder";
 import { getSanitizedMessagesForServer } from "../shared/visibility";
 
 type Message = Infer<typeof messageSchema>;
@@ -787,48 +781,12 @@ export const getMessagePageData = privateQuery({
 			authorMap,
 		);
 
-		const referenceTargets = collectMessageReferenceTargets(messagesToShow);
+		const serverDiscordIdMap = new Map([[server._id, server.discordId]]);
 
-		const [mentionMetadata, internalLinks] = await Promise.all([
-			getMentionMetadata(
-				ctx,
-				referenceTargets.userIds,
-				referenceTargets.channelIds,
-				server.discordId,
-			),
-			getInternalLinksMetadata(ctx, referenceTargets.discordLinks),
-		]);
-
-		const internalLinkLookup = createInternalLinkLookup(internalLinks);
-
-		const messagesWithData = await asyncMap(
+		const messagesWithData = await buildMessagesWithFullData(
+			ctx,
 			sanitizedMessages,
-			async ({ message, author: sanitizedAuthor }) => {
-				const mentionIds = extractMentionIds(message.content);
-				const messageDiscordLinks = extractDiscordLinks(message.content);
-				const metadata = buildMessageMetadataRecord(
-					mentionMetadata,
-					server.discordId,
-					mentionIds,
-					internalLinkLookup,
-					messageDiscordLinks,
-				);
-
-				const [attachments, reactions, solutions] = await Promise.all([
-					findAttachmentsByMessageIdShared(ctx, message.id),
-					findReactionsByMessageIdShared(ctx, message.id),
-					getSolutionsForMessage(ctx, message),
-				]);
-
-				return {
-					message,
-					author: sanitizedAuthor,
-					attachments,
-					reactions,
-					solutions,
-					metadata,
-				};
-			},
+			serverDiscordIdMap,
 		);
 
 		return {

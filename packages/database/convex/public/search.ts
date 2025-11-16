@@ -3,16 +3,10 @@ import { v } from "convex/values";
 import { asyncMap } from "convex-helpers";
 import {
 	CHANNEL_TYPE,
-	extractDiscordLinks,
-	extractMentionIds,
-	findAttachmentsByMessageId,
-	findReactionsByMessageId,
-	findSolutionsByQuestionId,
 	getDiscordAccountById,
 	getFirstMessagesInChannels,
-	getInternalLinksMetadata,
-	getMentionMetadata,
 } from "../shared/shared";
+import { buildMessagesWithFullData } from "../shared/message-builder";
 import { getSanitizedMessages } from "../shared/visibility";
 import { publicQuery } from "./custom_functions";
 
@@ -53,132 +47,22 @@ export const publicSearch = publicQuery({
 		const serverMap = new Map(
 			servers
 				.filter((s): s is NonNullable<(typeof servers)[0]> => s !== null)
-				.map((s) => [s._id, s.discordId]),
+				.map((s) => [s._id, s]),
 		);
 
 		const sanitizedMessages = await getSanitizedMessages(ctx, messages, authorMap);
 
-		const allUserIds = new Set<string>();
-		const allChannelIds = new Set<string>();
-		const allDiscordLinks: Array<{
-			original: string;
-			guildId: string;
-			channelId: string;
-			messageId?: string;
-		}> = [];
+		const serverDiscordIdMap = new Map(
+			Array.from(serverMap.entries()).map(([serverId, server]) => [
+				serverId,
+				server.discordId,
+			]),
+		);
 
-		for (const { message } of sanitizedMessages) {
-			const { userIds, channelIds } = extractMentionIds(message.content);
-			for (const userId of userIds) {
-				allUserIds.add(userId);
-			}
-			for (const channelId of channelIds) {
-				allChannelIds.add(channelId);
-			}
-			const discordLinks = extractDiscordLinks(message.content);
-			allDiscordLinks.push(...discordLinks);
-		}
-
-		const internalLinks = await getInternalLinksMetadata(ctx, allDiscordLinks);
-
-		const messagesWithData = await Promise.all(
-			sanitizedMessages.map(async ({ message, author: sanitizedAuthor }) => {
-				const serverDiscordId = serverMap.get(message.serverId);
-				if (!serverDiscordId) {
-					const [attachments, reactions, solutions] = await Promise.all([
-						findAttachmentsByMessageId(ctx, message.id),
-						findReactionsByMessageId(ctx, message.id),
-						message.questionId
-							? findSolutionsByQuestionId(ctx, message.questionId)
-							: [],
-					]);
-
-					return {
-						message,
-						author: sanitizedAuthor,
-						attachments,
-						reactions,
-						solutions,
-					};
-				}
-
-				const { userIds, channelIds } = extractMentionIds(message.content);
-				const messageDiscordLinks = extractDiscordLinks(message.content);
-				const messageInternalLinks = internalLinks.filter((link) =>
-					messageDiscordLinks.some((dl) => dl.original === link.original),
-				);
-
-				const mentionMetadata = await getMentionMetadata(
-					ctx,
-					userIds,
-					channelIds,
-					serverDiscordId,
-				);
-
-				const messageUsers: Record<
-					string,
-					{ username: string; globalName: string | null; url: string }
-				> = {};
-				const messageChannels: Record<
-					string,
-					{
-						name: string;
-						type: number;
-						url: string;
-						indexingEnabled?: boolean;
-						exists?: boolean;
-					}
-				> = {};
-
-				for (const userId of userIds) {
-					if (mentionMetadata.users[userId]) {
-						messageUsers[userId] = mentionMetadata.users[userId];
-					}
-				}
-
-				for (const channelId of channelIds) {
-					const channelMeta = mentionMetadata.channels[channelId];
-					if (channelMeta) {
-						messageChannels[channelId] = channelMeta;
-					} else {
-						messageChannels[channelId] = {
-							name: "Unknown Channel",
-							type: 0,
-							url: `https://discord.com/channels/${serverDiscordId}/${channelId}`,
-							indexingEnabled: false,
-							exists: false,
-						};
-					}
-				}
-
-				const [attachments, reactions, solutions] = await Promise.all([
-					findAttachmentsByMessageId(ctx, message.id),
-					findReactionsByMessageId(ctx, message.id),
-					message.questionId
-						? findSolutionsByQuestionId(ctx, message.questionId)
-						: [],
-				]);
-
-				return {
-					message,
-					author: sanitizedAuthor,
-					attachments,
-					reactions,
-					solutions,
-					metadata: {
-						users:
-							Object.keys(messageUsers).length > 0 ? messageUsers : undefined,
-						channels:
-							Object.keys(messageChannels).length > 0
-								? messageChannels
-								: undefined,
-						internalLinks:
-							messageInternalLinks.length > 0
-								? messageInternalLinks
-								: undefined,
-					},
-				};
-			}),
+		const messagesWithData = await buildMessagesWithFullData(
+			ctx,
+			sanitizedMessages,
+			serverDiscordIdMap,
 		);
 
 		return {
