@@ -28,6 +28,7 @@ import type * as publicInternal_server_preferences from "../publicInternal/serve
 import type * as publicInternal_servers from "../publicInternal/servers.js";
 import type * as publicInternal_user_server_settings from "../publicInternal/user_server_settings.js";
 import type * as shared_auth from "../shared/auth.js";
+import type * as shared_authIdentity from "../shared/authIdentity.js";
 import type * as shared_betterAuth from "../shared/betterAuth.js";
 import type * as shared_permissions from "../shared/permissions.js";
 import type * as shared_shared from "../shared/shared.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   "publicInternal/servers": typeof publicInternal_servers;
   "publicInternal/user_server_settings": typeof publicInternal_user_server_settings;
   "shared/auth": typeof shared_auth;
+  "shared/authIdentity": typeof shared_authIdentity;
   "shared/betterAuth": typeof shared_betterAuth;
   "shared/permissions": typeof shared_permissions;
   "shared/shared": typeof shared_shared;

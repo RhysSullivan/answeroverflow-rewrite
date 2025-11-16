@@ -3,6 +3,7 @@ import { createOtelLayer } from "@packages/observability/effect-otel";
 import { checkBotId } from "botid/server";
 import { Effect, Layer } from "effect";
 import type { Context } from "hono";
+import { signAnonymousToken } from "@/lib/anonymous-auth";
 
 const OtelLayer = createOtelLayer("main-site");
 
@@ -15,7 +16,7 @@ export async function handleAnonymousSession(c: Context) {
 	if (!verification.isHuman) {
 		return c.json({ error: "Unauthorized" }, 401);
 	}
-	const sesssion = await Effect.gen(function* () {
+	const session = await Effect.gen(function* () {
 		const db = yield* Database;
 		return yield* db.anonymous_session.createAnonymousSession();
 	}).pipe(
@@ -23,5 +24,11 @@ export async function handleAnonymousSession(c: Context) {
 		Effect.runPromise,
 	);
 
-	return c.json(sesssion);
+	const token = await signAnonymousToken(session.sessionId);
+
+	return c.json({
+		token,
+		sessionId: session.sessionId,
+		expiresAt: session.expiresAt,
+	});
 }

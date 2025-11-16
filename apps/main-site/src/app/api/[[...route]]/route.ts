@@ -3,11 +3,18 @@ import { handle } from "hono/vercel";
 import { handleAuth } from "../handlers/auth";
 import { handleConvexWebhook } from "../handlers/convex-webhooks";
 import { handleAnonymousSession } from "../handlers/handle-anonymous-session";
+import { handleAnonymousJWKS } from "../handlers/handle-anonymous-jwks";
+import { handleAnonymousOpenIDConfig } from "../handlers/handle-anonymous-openid-config";
 
 const app = new Hono().basePath("/api");
 
 app.post("/v1/webhooks/convex", handleConvexWebhook);
 app.get("/auth/anonymous-session", handleAnonymousSession);
+app.get("/auth/anonymous-session/jwks", handleAnonymousJWKS);
+app.get(
+	"/auth/anonymous-session/.well-known/openid-configuration",
+	handleAnonymousOpenIDConfig,
+);
 
 app.on(["GET", "POST"], "/auth/*", handleAuth);
 

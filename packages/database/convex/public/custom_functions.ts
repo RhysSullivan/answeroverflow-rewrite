@@ -5,45 +5,64 @@ import {
 	customMutation,
 	customQuery,
 } from "convex-helpers/server/customFunctions";
-import type { ActionCtx, MutationCtx, QueryCtx } from "../_generated/server";
 import { action, mutation, query } from "../_generated/server";
-import { getDiscordAccountWithToken } from "../shared/auth";
+import { getDiscordAccountIdFromAuth } from "../shared/auth";
+import { getAuthIdentity } from "../shared/authIdentity";
 
-async function getDiscordAccountIdForWrapper(
-	ctx: QueryCtx | MutationCtx | ActionCtx,
-): Promise<string | null> {
-	const account = await getDiscordAccountWithToken(ctx);
-	return account?.accountId ?? null;
-}
+const ANONYMOUS_AUTH_APPLICATION_ID = "anonymous";
 
 export const publicQuery = customQuery(query, {
 	args: {
 		discordAccountId: v.optional(v.string()),
 		anonymousSessionId: v.optional(v.string()),
 	},
+	// @ts-expect-error
 	input: async (ctx, args) => {
-		const identity = await ctx.auth.getUserIdentity();
-		const anonymousSession = await ctx.db
-			.query("anonymousSessions")
-			.withIndex("by_sessionId", (q) =>
-				q.eq("sessionId", identity?.sessionId as string),
-			)
-			.first();
+		const identity = await getAuthIdentity(ctx);
 
-		const discordAccountId = await getDiscordAccountIdForWrapper(ctx);
-
-		if (!discordAccountId && !anonymousSession) {
-			throw new Error("Not authenticated or Discord account not linked");
+		console.log("identity", identity);
+		if (!identity) {
+			throw new Error("Not authenticated");
 		}
 
-		return {
-			ctx,
-			args: {
-				...args,
-				discordAccountId,
-				anonymousSessionId: anonymousSession?._id,
-			},
-		};
+		const identityType = identity.type;
+		const subject = identity.subject;
+
+		if (identityType === "anonymous" && subject) {
+			const anonymousSession = await ctx.db
+				.query("anonymousSessions")
+				.withIndex("by_sessionId", (q) => q.eq("sessionId", subject))
+				.first();
+
+			if (!anonymousSession) {
+				throw new Error("Not authenticated");
+			}
+
+			return {
+				ctx,
+				args: {
+					...args,
+					anonymousSessionId: anonymousSession._id,
+					discordAccountId: undefined,
+				},
+			};
+		}
+
+		if (identityType !== "anonymous") {
+			const discordAccountId = await getDiscordAccountIdFromAuth(ctx);
+			if (discordAccountId) {
+				return {
+					ctx,
+					args: {
+						...args,
+						discordAccountId,
+						anonymousSessionId: undefined,
+					},
+				};
+			}
+		}
+
+		throw new Error("Not authenticated");
 	},
 });
 
@@ -52,8 +71,13 @@ export const publicMutation = customMutation(mutation, {
 		discordAccountId: v.optional(v.string()),
 	},
 	input: async (ctx, args) => {
-		const discordAccountId = await getDiscordAccountIdForWrapper(ctx);
+		const identity = await getAuthIdentity(ctx);
 
+		if (!identity || identity.audience !== "convex") {
+			throw new Error("Not authenticated or Discord account not linked");
+		}
+
+		const discordAccountId = await getDiscordAccountIdFromAuth(ctx);
 		if (!discordAccountId) {
 			throw new Error("Not authenticated or Discord account not linked");
 		}
@@ -73,8 +97,13 @@ export const publicAction = customAction(action, {
 		discordAccountId: v.optional(v.string()),
 	},
 	input: async (ctx, args) => {
-		const discordAccountId = await getDiscordAccountIdForWrapper(ctx);
+		const identity = await getAuthIdentity(ctx);
 
+		if (!identity || identity.audience !== "convex") {
+			throw new Error("Not authenticated or Discord account not linked");
+		}
+
+		const discordAccountId = await getDiscordAccountIdFromAuth(ctx);
 		if (!discordAccountId) {
 			throw new Error("Not authenticated or Discord account not linked");
 		}
