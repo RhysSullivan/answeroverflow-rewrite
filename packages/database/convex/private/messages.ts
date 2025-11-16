@@ -27,6 +27,11 @@ import {
 	getMessageById as getMessageByIdShared,
 	upsertMessageInternalLogic,
 } from "../shared/shared";
+import {
+	applyVisibilityToMessages,
+	getAuthorVisibilityContexts,
+	getServerVisibilityContext,
+} from "../shared/visibility";
 
 type Message = Infer<typeof messageSchema>;
 
@@ -779,6 +784,19 @@ export const getMessagePageData = privateQuery({
 
 		const authorMap = await buildAuthorMap(ctx, messagesToShow);
 
+		const authorIds = Array.from(authorMap.keys());
+		const [serverVisibility, authorVisibilityMap] = await Promise.all([
+			getServerVisibilityContext(ctx, targetMessage.serverId),
+			getAuthorVisibilityContexts(ctx, targetMessage.serverId, authorIds),
+		]);
+
+		const sanitizedMessages = applyVisibilityToMessages(
+			messagesToShow,
+			serverVisibility,
+			authorMap,
+			authorVisibilityMap,
+		);
+
 		const referenceTargets = collectMessageReferenceTargets(messagesToShow);
 
 		const [mentionMetadata, internalLinks] = await Promise.all([
@@ -793,40 +811,35 @@ export const getMessagePageData = privateQuery({
 
 		const internalLinkLookup = createInternalLinkLookup(internalLinks);
 
-		const messagesWithData = await asyncMap(messagesToShow, async (message) => {
-			const mentionIds = extractMentionIds(message.content);
-			const messageDiscordLinks = extractDiscordLinks(message.content);
-			const metadata = buildMessageMetadataRecord(
-				mentionMetadata,
-				server.discordId,
-				mentionIds,
-				internalLinkLookup,
-				messageDiscordLinks,
-			);
+		const messagesWithData = await asyncMap(
+			sanitizedMessages,
+			async ({ message, author: sanitizedAuthor }) => {
+				const mentionIds = extractMentionIds(message.content);
+				const messageDiscordLinks = extractDiscordLinks(message.content);
+				const metadata = buildMessageMetadataRecord(
+					mentionMetadata,
+					server.discordId,
+					mentionIds,
+					internalLinkLookup,
+					messageDiscordLinks,
+				);
 
-			const [attachments, reactions, solutions] = await Promise.all([
-				findAttachmentsByMessageIdShared(ctx, message.id),
-				findReactionsByMessageIdShared(ctx, message.id),
-				getSolutionsForMessage(ctx, message),
-			]);
+				const [attachments, reactions, solutions] = await Promise.all([
+					findAttachmentsByMessageIdShared(ctx, message.id),
+					findReactionsByMessageIdShared(ctx, message.id),
+					getSolutionsForMessage(ctx, message),
+				]);
 
-			const author = authorMap.get(message.authorId) ?? null;
-
-			return {
-				message,
-				author: author
-					? {
-							id: author.id,
-							name: author.name,
-							avatar: author.avatar,
-						}
-					: null,
-				attachments,
-				reactions,
-				solutions,
-				metadata,
-			};
-		});
+				return {
+					message,
+					author: sanitizedAuthor,
+					attachments,
+					reactions,
+					solutions,
+					metadata,
+				};
+			},
+		);
 
 		return {
 			messages: messagesWithData,
