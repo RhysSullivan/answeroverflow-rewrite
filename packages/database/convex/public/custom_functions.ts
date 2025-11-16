@@ -19,11 +19,20 @@ async function getDiscordAccountIdForWrapper(
 export const publicQuery = customQuery(query, {
 	args: {
 		discordAccountId: v.optional(v.string()),
+		anonymousSessionId: v.optional(v.string()),
 	},
 	input: async (ctx, args) => {
+		const identity = await ctx.auth.getUserIdentity();
+		const anonymousSession = await ctx.db
+			.query("anonymousSessions")
+			.withIndex("by_sessionId", (q) =>
+				q.eq("sessionId", identity?.sessionId as string),
+			)
+			.first();
+
 		const discordAccountId = await getDiscordAccountIdForWrapper(ctx);
 
-		if (!discordAccountId) {
+		if (!discordAccountId && !anonymousSession) {
 			throw new Error("Not authenticated or Discord account not linked");
 		}
 
@@ -32,6 +41,7 @@ export const publicQuery = customQuery(query, {
 			args: {
 				...args,
 				discordAccountId,
+				anonymousSessionId: anonymousSession?._id,
 			},
 		};
 	},

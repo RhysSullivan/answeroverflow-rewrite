@@ -5,7 +5,7 @@ import { Card, CardContent } from "@packages/ui/components/card";
 import { DiscordMessage } from "@packages/ui/components/discord-message";
 import { Input } from "@packages/ui/components/input";
 import { Skeleton } from "@packages/ui/components/skeleton";
-import { usePaginatedQuery } from "convex/react";
+import { useConvex, usePaginatedQuery } from "convex/react";
 import { useQueryState } from "nuqs";
 import { useEffect, useRef } from "react";
 import { useDebounce } from "use-debounce";

@@ -18,6 +18,7 @@ import type * as client_publicInternal from "../client/publicInternal.js";
 import type * as http from "../http.js";
 import type * as public_custom_functions from "../public/custom_functions.js";
 import type * as public_search from "../public/search.js";
+import type * as publicInternal_anonymous_session from "../publicInternal/anonymous_session.js";
 import type * as publicInternal_attachments from "../publicInternal/attachments.js";
 import type * as publicInternal_channels from "../publicInternal/channels.js";
 import type * as publicInternal_discord_accounts from "../publicInternal/discord_accounts.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "public/custom_functions": typeof public_custom_functions;
   "public/search": typeof public_search;
+  "publicInternal/anonymous_session": typeof publicInternal_anonymous_session;
   "publicInternal/attachments": typeof publicInternal_attachments;
   "publicInternal/channels": typeof publicInternal_channels;
   "publicInternal/discord_accounts": typeof publicInternal_discord_accounts;
