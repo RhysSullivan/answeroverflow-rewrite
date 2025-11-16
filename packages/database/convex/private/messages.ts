@@ -11,8 +11,6 @@ import {
 import { attachmentSchema, emojiSchema, messageSchema } from "../schema";
 import {
 	deleteMessageInternalLogic,
-	extractDiscordLinks,
-	extractMentionIds,
 	findAttachmentsByMessageId as findAttachmentsByMessageIdShared,
 	findIgnoredDiscordAccountById,
 	findMessagesByAuthorId as findMessagesByAuthorIdShared,
@@ -21,26 +19,12 @@ import {
 	findSolutionsByQuestionId as findSolutionsByQuestionIdShared,
 	findUserServerSettingsById,
 	getChannelWithSettings,
-	getDiscordAccountById,
-	getInternalLinksMetadata,
-	getMentionMetadata,
 	getMessageById as getMessageByIdShared,
 	upsertMessageInternalLogic,
 } from "../shared/shared";
+import { getMessages as getMessagesWithRelations } from "../shared/messages";
 
 type Message = Infer<typeof messageSchema>;
-
-type DiscordLinkReference = ReturnType<typeof extractDiscordLinks>[number];
-type MentionMetadataResult = Awaited<ReturnType<typeof getMentionMetadata>>;
-type InternalLinkMetadata = Awaited<
-	ReturnType<typeof getInternalLinksMetadata>
->;
-type AuthorRecord = NonNullable<
-	Awaited<ReturnType<typeof getDiscordAccountById>>
->;
-type SolutionsResult = Awaited<
-	ReturnType<typeof findSolutionsByQuestionIdShared>
->;
 
 async function isIgnoredAccount(
 	ctx: QueryCtx | MutationCtx,
@@ -57,124 +41,6 @@ async function hasMessageIndexingDisabled(
 ): Promise<boolean> {
 	const settings = await findUserServerSettingsById(ctx, authorId, serverId);
 	return settings?.messageIndexingDisabled === true;
-}
-
-function collectMessageReferenceTargets(messages: Array<Message>): {
-	userIds: string[];
-	channelIds: string[];
-	discordLinks: Array<DiscordLinkReference>;
-} {
-	const userIds = new Set<string>();
-	const channelIds = new Set<string>();
-	const discordLinks: Array<DiscordLinkReference> = [];
-
-	for (const message of messages) {
-		const mentionIds = extractMentionIds(message.content);
-		for (const userId of mentionIds.userIds) {
-			userIds.add(userId);
-		}
-		for (const channelId of mentionIds.channelIds) {
-			channelIds.add(channelId);
-		}
-		discordLinks.push(...extractDiscordLinks(message.content));
-	}
-
-	return {
-		userIds: Array.from(userIds),
-		channelIds: Array.from(channelIds),
-		discordLinks,
-	};
-}
-
-async function buildAuthorMap(
-	ctx: QueryCtx | MutationCtx,
-	messages: Array<Message>,
-): Promise<Map<string, AuthorRecord>> {
-	const uniqueAuthorIds = Array.from(
-		new Set(messages.map((message) => message.authorId)),
-	);
-
-	const authors = await asyncMap(uniqueAuthorIds, (id) =>
-		getDiscordAccountById(ctx, id),
-	);
-
-	return new Map(
-		authors
-			.filter((author): author is AuthorRecord => author !== null)
-			.map((author) => [author.id, author]),
-	);
-}
-
-function createInternalLinkLookup(
-	internalLinks: InternalLinkMetadata,
-): Map<string, InternalLinkMetadata[number]> {
-	const lookup = new Map<string, InternalLinkMetadata[number]>();
-
-	for (const link of internalLinks) {
-		if (!lookup.has(link.original)) {
-			lookup.set(link.original, link);
-		}
-	}
-
-	return lookup;
-}
-
-function buildMessageMetadataRecord(
-	mentionMetadata: MentionMetadataResult,
-	serverDiscordId: string,
-	mentionIds: ReturnType<typeof extractMentionIds>,
-	internalLinkLookup: Map<string, InternalLinkMetadata[number]>,
-	messageDiscordLinks: Array<DiscordLinkReference>,
-) {
-	const users: MentionMetadataResult["users"] = {};
-	for (const userId of mentionIds.userIds) {
-		const user = mentionMetadata.users[userId];
-		if (user) {
-			users[userId] = user;
-		}
-	}
-
-	const channels: MentionMetadataResult["channels"] = {};
-	for (const channelId of mentionIds.channelIds) {
-		const channelMeta = mentionMetadata.channels[channelId];
-		if (channelMeta) {
-			channels[channelId] = channelMeta;
-		} else {
-			channels[channelId] = {
-				name: "Unknown Channel",
-				type: 0,
-				url: `https://discord.com/channels/${serverDiscordId}/${channelId}`,
-				indexingEnabled: false,
-				exists: false,
-			};
-		}
-	}
-
-	const internalLinks: Array<InternalLinkMetadata[number]> = [];
-	for (const link of messageDiscordLinks) {
-		const metadata = internalLinkLookup.get(link.original);
-		if (metadata) {
-			internalLinks.push(metadata);
-		}
-	}
-
-	return {
-		users: Object.keys(users).length === 0 ? undefined : users,
-		channels: Object.keys(channels).length === 0 ? undefined : channels,
-		internalLinks: internalLinks.length === 0 ? undefined : internalLinks,
-	};
-}
-
-async function getSolutionsForMessage(
-	ctx: QueryCtx | MutationCtx,
-	message: Message,
-) {
-	if (!message.questionId) {
-		const empty: SolutionsResult = [];
-		return empty;
-	}
-
-	return await findSolutionsByQuestionIdShared(ctx, message.questionId);
 }
 
 async function loadThreadSummary(
@@ -777,55 +643,9 @@ export const getMessagePageData = privateQuery({
 			targetMessage.id,
 		);
 
-		const authorMap = await buildAuthorMap(ctx, messagesToShow);
-
-		const referenceTargets = collectMessageReferenceTargets(messagesToShow);
-
-		const [mentionMetadata, internalLinks] = await Promise.all([
-			getMentionMetadata(
-				ctx,
-				referenceTargets.userIds,
-				referenceTargets.channelIds,
-				server.discordId,
-			),
-			getInternalLinksMetadata(ctx, referenceTargets.discordLinks),
-		]);
-
-		const internalLinkLookup = createInternalLinkLookup(internalLinks);
-
-		const messagesWithData = await asyncMap(messagesToShow, async (message) => {
-			const mentionIds = extractMentionIds(message.content);
-			const messageDiscordLinks = extractDiscordLinks(message.content);
-			const metadata = buildMessageMetadataRecord(
-				mentionMetadata,
-				server.discordId,
-				mentionIds,
-				internalLinkLookup,
-				messageDiscordLinks,
-			);
-
-			const [attachments, reactions, solutions] = await Promise.all([
-				findAttachmentsByMessageIdShared(ctx, message.id),
-				findReactionsByMessageIdShared(ctx, message.id),
-				getSolutionsForMessage(ctx, message),
-			]);
-
-			const author = authorMap.get(message.authorId) ?? null;
-
-			return {
-				message,
-				author: author
-					? {
-							id: author.id,
-							name: author.name,
-							avatar: author.avatar,
-						}
-					: null,
-				attachments,
-				reactions,
-				solutions,
-				metadata,
-			};
+		const messagesWithData = await getMessagesWithRelations(ctx, {
+			type: "messages",
+			messages: messagesToShow,
 		});
 
 		return {
