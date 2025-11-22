@@ -1,8 +1,11 @@
 import { expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+import { generateSnowflakeString } from "@packages/test-utils/snowflakes";
 import type { Server, UserServerSettings } from "../convex/schema";
 import { Database } from "./database";
 import { DatabaseTestLayer } from "./database-test";
+
+const serverDiscordId = generateSnowflakeString();
 
 const testServer: Server = {
 	name: "Test Server",
@@ -10,7 +13,7 @@ const testServer: Server = {
 	icon: "https://example.com/icon.png",
 	vanityInviteCode: "test",
 	vanityUrl: "test",
-	discordId: "server123",
+	discordId: serverDiscordId,
 	plan: "FREE",
 	approximateMemberCount: 0,
 };
@@ -36,21 +39,22 @@ it.scoped(
 		Effect.gen(function* () {
 			const database = yield* Database;
 
-			yield* database.servers.upsertServer(testServer);
-			const serverLiveData = yield* database.servers.getServerByDiscordId({
-				discordId: "server123",
+		yield* database.servers.upsertServer(testServer);
+		const serverLiveData = yield* database.servers.getServerByDiscordId({
+			discordId: serverDiscordId,
+		});
+		const serverId = serverLiveData?.discordId;
+
+		if (!serverId) {
+			throw new Error("Server not found");
+		}
+
+		const userId = generateSnowflakeString();
+		const liveData =
+			yield* database.user_server_settings.findUserServerSettingsById({
+				userId,
+				serverId: serverId,
 			});
-			const serverId = serverLiveData?.discordId;
-
-			if (!serverId) {
-				throw new Error("Server not found");
-			}
-
-			const liveData =
-				yield* database.user_server_settings.findUserServerSettingsById({
-					userId: "user123",
-					serverId: serverId,
-				});
 
 			expect(liveData).toBeNull();
 		}).pipe(Effect.provide(DatabaseTestLayer)),
