@@ -1,0 +1,14 @@
+{
+	"name": "@packages/test-utils",
+	"version": "1.0.0",
+	"type": "module",
+	"exports": {
+		"./*": "./src/*.ts"
+	},
+	"dependencies": {
+		"fast-check": "^3.23.2"
+	},
+	"devDependencies": {
+		"typescript": "catalog:"
+	}
+}
