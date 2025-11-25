@@ -6,21 +6,15 @@ import * as fc from "fast-check";
  */
 
 // Discord snowflake ID as BigInt
+// Simple arbitrary that generates valid snowflake-range BigInts
 const DISCORD_EPOCH = 1420070400000n;
+const MIN_SNOWFLAKE = (DISCORD_EPOCH - DISCORD_EPOCH) << 22n; // 0
+const MAX_SNOWFLAKE = (BigInt(Date.now()) - DISCORD_EPOCH) << 22n;
 
-export const discordSnowflakeBigInt = fc
-	.tuple(
-		fc.bigInt({ min: DISCORD_EPOCH, max: BigInt(Date.now()) }),
-		fc.bigInt({ min: 0n, max: 31n }), // workerId
-		fc.bigInt({ min: 0n, max: 31n }), // processId
-		fc.bigInt({ min: 0n, max: 4095n }), // increment
-	)
-	.map(([timestampMs, workerId, processId, increment]) => {
-		const timestamp = timestampMs - DISCORD_EPOCH;
-		return (
-			(timestamp << 22n) | (workerId << 17n) | (processId << 12n) | increment
-		);
-	});
+export const discordSnowflakeBigInt = fc.bigInt({
+	min: MIN_SNOWFLAKE,
+	max: MAX_SNOWFLAKE,
+});
 
 // Server names
 export const serverName = fc.oneof(
