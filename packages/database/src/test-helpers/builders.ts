@@ -1,18 +1,10 @@
 import {
 	sample,
 	serverName,
-	discordSnowflakeBigInt,
-	serverPlan,
-	memberCount,
-	avatarHash,
-	discordUsername,
+	snowflakeBigInt,
+	username,
 	channelName,
-	channelType,
 	messageContent,
-	permissions,
-	filename,
-	fileSize,
-	contentType,
 } from "@packages/test-utils/arbitraries";
 import type {
 	Attachment,
@@ -27,7 +19,6 @@ import type {
 
 /**
  * Builder for creating test Server objects.
- * Use the fluent API to customize values, then call build() to get the final object.
  * Uses fast-check to generate random but valid test data.
  */
 export class ServerBuilder {
@@ -74,13 +65,12 @@ export class ServerBuilder {
 	}
 
 	build(): Server {
-		const discordId = this.data.discordId ?? sample(discordSnowflakeBigInt);
+		const discordId = this.data.discordId ?? sample(snowflakeBigInt);
 		return {
 			discordId,
 			name: this.data.name ?? sample(serverName),
-			approximateMemberCount:
-				this.data.approximateMemberCount ?? sample(memberCount),
-			plan: this.data.plan ?? sample(serverPlan),
+			approximateMemberCount: this.data.approximateMemberCount ?? 100,
+			plan: this.data.plan ?? "FREE",
 			icon: this.data.icon,
 			description: this.data.description,
 			vanityInviteCode: this.data.vanityInviteCode,
@@ -93,9 +83,6 @@ export class ServerBuilder {
 	}
 }
 
-/**
- * Builder for creating test ServerPreferences objects.
- */
 export class ServerPreferencesBuilder {
 	private data: Partial<ServerPreferences> = {};
 
@@ -131,7 +118,7 @@ export class ServerPreferencesBuilder {
 
 	build(): ServerPreferences {
 		return {
-			serverId: this.data.serverId ?? sample(discordSnowflakeBigInt),
+			serverId: this.data.serverId ?? sample(snowflakeBigInt),
 			readTheRulesConsentEnabled: this.data.readTheRulesConsentEnabled,
 			considerAllMessagesPublicEnabled:
 				this.data.considerAllMessagesPublicEnabled,
@@ -142,9 +129,6 @@ export class ServerPreferencesBuilder {
 	}
 }
 
-/**
- * Builder for creating test DiscordAccount objects.
- */
 export class DiscordAccountBuilder {
 	private data: Partial<DiscordAccount> = {};
 
@@ -164,18 +148,15 @@ export class DiscordAccountBuilder {
 	}
 
 	build(): DiscordAccount {
-		const id = this.data.id ?? sample(discordSnowflakeBigInt);
+		const id = this.data.id ?? sample(snowflakeBigInt);
 		return {
 			id,
-			name: this.data.name ?? sample(discordUsername),
+			name: this.data.name ?? sample(username),
 			avatar: this.data.avatar,
 		};
 	}
 }
 
-/**
- * Builder for creating test Channel objects.
- */
 export class ChannelBuilder {
 	private data: Partial<Channel> = {};
 
@@ -215,12 +196,12 @@ export class ChannelBuilder {
 	}
 
 	build(): Channel {
-		const id = this.data.id ?? sample(discordSnowflakeBigInt);
+		const id = this.data.id ?? sample(snowflakeBigInt);
 		return {
 			id,
-			serverId: this.data.serverId ?? sample(discordSnowflakeBigInt),
+			serverId: this.data.serverId ?? sample(snowflakeBigInt),
 			name: this.data.name ?? sample(channelName),
-			type: this.data.type ?? 0, // Default to text channel, not random
+			type: this.data.type ?? 0,
 			parentId: this.data.parentId,
 			inviteCode: this.data.inviteCode,
 			archivedTimestamp: this.data.archivedTimestamp,
@@ -230,9 +211,6 @@ export class ChannelBuilder {
 	}
 }
 
-/**
- * Builder for creating test ChannelSettings objects.
- */
 export class ChannelSettingsBuilder {
 	private data: Partial<ChannelSettings> = {};
 
@@ -268,7 +246,7 @@ export class ChannelSettingsBuilder {
 
 	build(): ChannelSettings {
 		return {
-			channelId: this.data.channelId ?? sample(discordSnowflakeBigInt),
+			channelId: this.data.channelId ?? sample(snowflakeBigInt),
 			indexingEnabled: this.data.indexingEnabled ?? false,
 			markSolutionEnabled: this.data.markSolutionEnabled ?? false,
 			sendMarkSolutionInstructionsInNewThreads:
@@ -281,9 +259,6 @@ export class ChannelSettingsBuilder {
 	}
 }
 
-/**
- * Builder for creating test Message objects.
- */
 export class MessageBuilder {
 	private data: Partial<Message> = {};
 
@@ -333,12 +308,12 @@ export class MessageBuilder {
 	}
 
 	build(): Message {
-		const id = this.data.id ?? sample(discordSnowflakeBigInt);
+		const id = this.data.id ?? sample(snowflakeBigInt);
 		return {
 			id,
-			authorId: this.data.authorId ?? sample(discordSnowflakeBigInt),
-			serverId: this.data.serverId ?? sample(discordSnowflakeBigInt),
-			channelId: this.data.channelId ?? sample(discordSnowflakeBigInt),
+			authorId: this.data.authorId ?? sample(snowflakeBigInt),
+			serverId: this.data.serverId ?? sample(snowflakeBigInt),
+			channelId: this.data.channelId ?? sample(snowflakeBigInt),
 			content: this.data.content ?? sample(messageContent),
 			parentChannelId: this.data.parentChannelId,
 			childThreadId: this.data.childThreadId,
@@ -357,9 +332,6 @@ export class MessageBuilder {
 	}
 }
 
-/**
- * Builder for creating test UserServerSettings objects.
- */
 export class UserServerSettingsBuilder {
 	private data: Partial<UserServerSettings> = {};
 
@@ -390,9 +362,9 @@ export class UserServerSettingsBuilder {
 
 	build(): UserServerSettings {
 		return {
-			serverId: this.data.serverId ?? sample(discordSnowflakeBigInt),
-			userId: this.data.userId ?? sample(discordSnowflakeBigInt),
-			permissions: this.data.permissions ?? sample(permissions),
+			serverId: this.data.serverId ?? sample(snowflakeBigInt),
+			userId: this.data.userId ?? sample(snowflakeBigInt),
+			permissions: this.data.permissions ?? 0,
 			canPubliclyDisplayMessages: this.data.canPubliclyDisplayMessages ?? false,
 			messageIndexingDisabled: this.data.messageIndexingDisabled ?? false,
 			apiKey: this.data.apiKey,
@@ -402,9 +374,6 @@ export class UserServerSettingsBuilder {
 	}
 }
 
-/**
- * Builder for creating test Attachment objects.
- */
 export class AttachmentBuilder {
 	private data: Partial<Attachment> = {};
 
@@ -435,11 +404,11 @@ export class AttachmentBuilder {
 
 	build(): Omit<Attachment, "url"> {
 		return {
-			id: this.data.id ?? sample(discordSnowflakeBigInt),
-			messageId: this.data.messageId ?? sample(discordSnowflakeBigInt),
-			filename: this.data.filename ?? sample(filename),
-			size: this.data.size ?? sample(fileSize),
-			contentType: this.data.contentType ?? sample(contentType),
+			id: this.data.id ?? sample(snowflakeBigInt),
+			messageId: this.data.messageId ?? sample(snowflakeBigInt),
+			filename: this.data.filename ?? "test-file.txt",
+			size: this.data.size ?? 1024,
+			contentType: this.data.contentType,
 			width: this.data.width,
 			height: this.data.height,
 			description: this.data.description,
@@ -448,7 +417,7 @@ export class AttachmentBuilder {
 	}
 }
 
-// Factory functions for convenient builder creation
+// Factory functions
 export const server = () => new ServerBuilder();
 export const serverPreferences = () => new ServerPreferencesBuilder();
 export const discordAccount = () => new DiscordAccountBuilder();
