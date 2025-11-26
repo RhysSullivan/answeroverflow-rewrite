@@ -13,16 +13,23 @@ export default async function UserCommentsPage(props: Props) {
 	const params = await props.params;
 	const searchParams = await props.searchParams;
 
-	const serverId = searchParams.s ? BigInt(searchParams.s) : undefined;
-
 	const pageData = await Effect.gen(function* () {
 		const database = yield* Database;
-		const liveData = yield* database.private.discord_accounts.getUserPageData({
-			userId: BigInt(params.userId),
-			serverId,
-			limit: 10,
-		});
-		return liveData;
+		const [user, servers, commentsResult] = yield* Effect.all([
+			database.public.search.getUserById({ userId: params.userId }),
+			database.public.search.getServersUserHasPostedIn({
+				userId: params.userId,
+			}),
+			database.public.search.getUserComments({
+				userId: params.userId,
+				serverId: searchParams.s,
+				paginationOpts: { numItems: 10, cursor: null },
+			}),
+		]);
+		if (!user) {
+			return null;
+		}
+		return { user, servers, comments: commentsResult.page };
 	}).pipe(runtime.runPromise);
 
 	if (!pageData) {

@@ -12,6 +12,13 @@ import {
 } from "../shared/auth";
 import { getAuthIdentity } from "../shared/authIdentity";
 
+function validateBackendToken(token: string | undefined): boolean {
+	if (!token) return false;
+	const expectedToken = process.env.BACKEND_ACCESS_TOKEN;
+	if (!expectedToken) return false;
+	return token === expectedToken;
+}
+
 export const publicQuery = customQuery(query, {
 	args: {
 		discordAccountId: v.optional(v.string()),
@@ -24,8 +31,23 @@ export const publicQuery = customQuery(query, {
 			),
 		),
 		rateLimitKey: v.optional(v.string()),
+		backendAccessToken: v.optional(v.string()),
 	},
 	input: async (ctx, args) => {
+		if (validateBackendToken(args.backendAccessToken)) {
+			return {
+				ctx,
+				args: {
+					...args,
+					rateLimitKey: "backend",
+					discordAccountId: undefined,
+					anonymousSessionId: undefined,
+					type: "backend" as const,
+					backendAccessToken: undefined,
+				},
+			};
+		}
+
 		const identity = await getAuthIdentity(ctx);
 		if (!identity) {
 			throw new Error("Not authenticated");
@@ -40,6 +62,7 @@ export const publicQuery = customQuery(query, {
 					discordAccountId: undefined,
 					anonymousSessionId: undefined,
 					type: "backend" as const,
+					backendAccessToken: undefined,
 				},
 			};
 		}
@@ -77,6 +100,7 @@ export const publicQuery = customQuery(query, {
 				discordAccountId,
 				anonymousSessionId,
 				type: identityType,
+				backendAccessToken: undefined,
 			},
 		};
 	},
