@@ -118,6 +118,7 @@
         "convex-helpers": "^0.1.104",
         "discord-api-types": "^0.38.24",
         "effect": "catalog:",
+        "jose": "^6.1.2",
         "posthog-node": "^4.2.0",
         "stripe": "^20",
         "unique-names-generator": "^4.7.1",

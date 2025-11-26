@@ -20,7 +20,7 @@ export const publicQuery = customQuery(query, {
 			v.union(
 				v.literal("signed-in"),
 				v.literal("anonymous"),
-				v.literal("system"),
+				v.literal("backend"),
 			),
 		),
 		rateLimitKey: v.optional(v.string()),
@@ -31,15 +31,15 @@ export const publicQuery = customQuery(query, {
 			throw new Error("Not authenticated");
 		}
 
-		if (identity.issuer === "system") {
+		if (identity.audience === "backend") {
 			return {
 				ctx,
 				args: {
 					...args,
-					rateLimitKey: "system",
+					rateLimitKey: "backend",
 					discordAccountId: undefined,
 					anonymousSessionId: undefined,
-					type: "system" as const,
+					type: "backend" as const,
 				},
 			};
 		}

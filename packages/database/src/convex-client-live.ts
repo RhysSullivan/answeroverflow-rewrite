@@ -2,6 +2,7 @@ import { ConvexClient } from "convex/browser";
 import type { FunctionReference } from "convex/server";
 import { Config, Context, Effect, Layer } from "effect";
 import { api, internal } from "../convex/_generated/api";
+import { getBackendAuthToken } from "./backend-auth";
 import {
 	type ConvexClientShared,
 	ConvexClientUnified,
@@ -9,24 +10,13 @@ import {
 	type WrappedUnifiedClient,
 } from "./convex-unified-client";
 
-type ConvexClientWithAdminAuth = ConvexClient & {
-	setAdminAuth: (
-		token: string,
-		actingAs?: { subject: string; issuer: string },
-	) => void;
-};
-
 const createLiveService = Effect.gen(function* () {
 	const convexUrl = yield* Config.string("CONVEX_URL");
 	const backendAccessToken = yield* Config.string("BACKEND_ACCESS_TOKEN");
-	const deployKey = yield* Config.string("CONVEX_DEPLOY_KEY");
 
-	const client = new ConvexClient(convexUrl) as ConvexClientWithAdminAuth;
+	const client = new ConvexClient(convexUrl);
 
-	client.setAdminAuth(deployKey, {
-		subject: "backend",
-		issuer: "system",
-	});
+	client.setAuth(getBackendAuthToken);
 
 	const wrappedClient: ConvexClientShared = {
 		query: client.query.bind(client),
