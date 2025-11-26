@@ -28,8 +28,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 	const pageData = await Effect.gen(function* () {
 		const database = yield* Database;
-		const liveData = yield* database.private.messages.getMessagePageData({
-			messageId: BigInt(params.messageId),
+		const liveData = yield* database.public.messages.getMessagePageData({
+			messageId: params.messageId,
 		});
 		return liveData;
 	}).pipe(runtime.runPromise);
@@ -67,8 +67,8 @@ export default async function Page(props: Props) {
 
 	const message = await Effect.gen(function* () {
 		const database = yield* Database;
-		return yield* database.private.messages.getMessageById({
-			id: BigInt(params.messageId),
+		return yield* database.public.messages.getMessageById({
+			id: params.messageId,
 		});
 	}).pipe(runtime.runPromise);
 
@@ -83,8 +83,8 @@ export default async function Page(props: Props) {
 
 	const pageData = await Effect.gen(function* () {
 		const database = yield* Database;
-		const liveData = yield* database.private.messages.getMessagePageData({
-			messageId: BigInt(params.messageId),
+		const liveData = yield* database.public.messages.getMessagePageData({
+			messageId: params.messageId,
 		});
 		return liveData;
 	}).pipe(runtime.runPromise);

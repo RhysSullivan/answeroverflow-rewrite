@@ -30,7 +30,7 @@ export default async function DomainLayout(props: {
 	const domain = decodeURIComponent(params.domain);
 	const tenantData = await Effect.gen(function* () {
 		const database = yield* Database;
-		const tenant = yield* database.private.servers.getServerByDomain({
+		const tenant = yield* database.public.servers.getServerByDomain({
 			domain,
 		});
 		if (!tenant?.server || !tenant?.preferences) {

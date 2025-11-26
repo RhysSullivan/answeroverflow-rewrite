@@ -136,9 +136,18 @@ async function generateFunctionTypes(): Promise<void> {
 		namespaceToFunctions,
 	);
 
-	allFunctions.sort((a, b) => a.path.localeCompare(b.path));
+	const uniqueFunctions = new Map<string, FunctionInfo>();
+	for (const func of allFunctions) {
+		if (!uniqueFunctions.has(func.path)) {
+			uniqueFunctions.set(func.path, func);
+		}
+	}
 
-	const typeMapEntries = allFunctions
+	const dedupedFunctions = Array.from(uniqueFunctions.values()).sort((a, b) =>
+		a.path.localeCompare(b.path),
+	);
+
+	const typeMapEntries = dedupedFunctions
 		.map((f) => `  "${f.path}": "${f.type}"`)
 		.join(",\n");
 
@@ -147,8 +156,10 @@ async function generateFunctionTypes(): Promise<void> {
 	const namespaceStructureEntries = namespaceArray
 		.map((ns) => {
 			const functions = namespaceToFunctions.get(ns) || [];
-			const functionNames = functions.map((f) => f.path.split(".")[1]).sort();
-			return `  "${ns}": ${JSON.stringify(functionNames)}`;
+			const uniqueNames = [
+				...new Set(functions.map((f) => f.path.split(".")[1])),
+			].sort();
+			return `  "${ns}": ${JSON.stringify(uniqueNames)}`;
 		})
 		.join(",\n");
 
@@ -183,7 +194,7 @@ export function getNamespaceFunctions(namespace: keyof typeof NAMESPACE_STRUCTUR
 
 	await Bun.write(OUTPUT_FILE, output);
 	console.log(
-		`Generated ${allFunctions.length} function mappings and ${namespaces.size} namespaces in ${OUTPUT_FILE}`,
+		`Generated ${dedupedFunctions.length} function mappings and ${namespaces.size} namespaces in ${OUTPUT_FILE}`,
 	);
 }
 
