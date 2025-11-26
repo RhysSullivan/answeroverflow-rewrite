@@ -1,5 +1,5 @@
-import { expect, test, describe } from "vitest";
 import { convexTest } from "@packages/convex-test";
+import { describe, expect, test } from "vitest";
 import { api } from "../convex/_generated/api";
 import schema from "../convex/schema";
 
