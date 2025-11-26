@@ -104,8 +104,8 @@ export async function GET(req: Request) {
 
 	const data = await Effect.gen(function* () {
 		const database = yield* Database;
-		const liveData = yield* database.private.messages.getMessagePageData({
-			messageId: BigInt(id),
+		const liveData = yield* database.public.messages.getMessagePageData({
+			messageId: id,
 		});
 		return liveData;
 	}).pipe(runtime.runPromise);

@@ -16,7 +16,7 @@ import { ChevronDown, Hash, MessageSquare } from "lucide-react";
 import { useState } from "react";
 
 type ChannelPageData = NonNullable<
-	FunctionReturnType<typeof api.private.channels.getChannelPageData>
+	FunctionReturnType<typeof api.public.channels.getChannelPageData>
 >;
 
 function getChannelIcon(type: number) {

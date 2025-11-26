@@ -35,7 +35,7 @@ import { Array as Arr, Predicate } from "effect";
 import { ExternalLink, MessageSquare } from "lucide-react";
 
 type MessagePageData = NonNullable<
-	FunctionReturnType<typeof api.private.messages.getMessagePageData>
+	FunctionReturnType<typeof api.public.messages.getMessagePageData>
 >;
 
 const DISCORD_CLIENT_ID = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;

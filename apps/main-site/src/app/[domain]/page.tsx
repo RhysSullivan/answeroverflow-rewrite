@@ -28,7 +28,7 @@ export default async function DomainPage(props: {
 
 	const tenantData = await Effect.gen(function* () {
 		const database = yield* Database;
-		const tenant = yield* database.private.servers.getServerByDomain({
+		const tenant = yield* database.public.servers.getServerByDomain({
 			domain,
 		});
 		return {
