@@ -16,15 +16,35 @@ export const publicQuery = customQuery(query, {
 	args: {
 		discordAccountId: v.optional(v.string()),
 		anonymousSessionId: v.optional(v.string()),
-		type: v.optional(v.union(v.literal("signed-in"), v.literal("anonymous"))),
+		type: v.optional(
+			v.union(
+				v.literal("signed-in"),
+				v.literal("anonymous"),
+				v.literal("system"),
+			),
+		),
 		rateLimitKey: v.optional(v.string()),
 	},
 	input: async (ctx, args) => {
 		const identity = await getAuthIdentity(ctx);
-		let anonymousSessionId: string | undefined;
 		if (!identity) {
 			throw new Error("Not authenticated");
 		}
+
+		if (identity.issuer === "system") {
+			return {
+				ctx,
+				args: {
+					...args,
+					rateLimitKey: "system",
+					discordAccountId: undefined,
+					anonymousSessionId: undefined,
+					type: "system" as const,
+				},
+			};
+		}
+
+		let anonymousSessionId: string | undefined;
 		const identityType = identity.type;
 		const subject = identity.subject;
 		if (identityType === "anonymous" && subject) {
