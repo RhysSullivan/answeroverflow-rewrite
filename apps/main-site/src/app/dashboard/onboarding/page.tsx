@@ -15,11 +15,9 @@ import { Skeleton } from "@packages/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useAction } from "convex/react";
 import { CheckCircle2 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authClient } from "../../../lib/auth-client";
-
-type OnboardingStep = "auth" | "install" | "complete";
 
 export default function OnboardingPage() {
 	const router = useRouter();
@@ -31,17 +29,12 @@ export default function OnboardingPage() {
 	const trackBotAddClick = useAction(
 		api.authenticated.dashboard.trackBotAddClick,
 	);
-	const [step, setStep] = useState<OnboardingStep>("auth");
 	const [installingServerId, setInstallingServerId] = useState<string | null>(
 		null,
 	);
 
-	const {
-		data: servers,
-		isLoading: isServersLoading,
-		refetch: refetchServers,
-	} = useQuery({
-		queryKey: ["dashboard-servers"],
+	const { data: servers, isLoading: isServersLoading } = useQuery({
+		queryKey: ["dashboard-servers", installingServerId],
 		queryFn: async () => {
 			if (!session?.user) {
 				throw new Error("Not authenticated");
@@ -49,53 +42,31 @@ export default function OnboardingPage() {
 			return await getUserServers({});
 		},
 		enabled: !isSessionPending && !!session?.user,
+		refetchInterval: installingServerId ? 3000 : false,
 	});
 
 	const selectedServer = servers?.find((s) => s.discordId === serverId);
+	const installingServer = installingServerId
+		? servers?.find((s) => s.discordId === installingServerId)
+		: null;
+	const isInstallComplete =
+		installingServer?.hasBot && installingServer?.aoServerId;
 
 	useEffect(() => {
-		if (isSessionPending) {
-			setStep("auth");
-			return;
+		if (isInstallComplete && installingServerId) {
+			setInstallingServerId(null);
 		}
+	}, [isInstallComplete, installingServerId]);
 
-		if (!session?.user) {
-			setStep("auth");
-			return;
-		}
+	const step = (() => {
+		if (isSessionPending || !session?.user) return "auth";
+		if (isInstallComplete) return "complete";
+		return "install";
+	})();
 
-		if (!serverId) {
-			router.push("/dashboard");
-			return;
-		}
-
-		if (step === "auth" && serverId) {
-			setStep("install");
-		}
-	}, [session, isSessionPending, serverId, step, router]);
-
-	useEffect(() => {
-		if (step === "install" && installingServerId && selectedServer) {
-			let attempts = 0;
-			const maxAttempts = 40; // 2 minutes max (40 * 3 seconds)
-
-			const interval = setInterval(async () => {
-				attempts++;
-				const updatedServers = await refetchServers();
-				const server = updatedServers.data?.find(
-					(s) => s.discordId === installingServerId,
-				);
-				if (server?.hasBot && server.aoServerId) {
-					setStep("complete");
-					clearInterval(interval);
-				} else if (attempts >= maxAttempts) {
-					clearInterval(interval);
-				}
-			}, 3000); // Check every 3 seconds
-
-			return () => clearInterval(interval);
-		}
-	}, [step, installingServerId, selectedServer, refetchServers]);
+	if (!isSessionPending && session?.user && !serverId) {
+		redirect("/dashboard");
+	}
 
 	const handleInstallClick = async (discordId: string) => {
 		const discordClientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
